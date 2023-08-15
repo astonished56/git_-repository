@@ -1,0 +1,385 @@
+program lib_tpe
+--***********************************************************
+--
+-- Copyright 2018 - 2023 speedbot All Rights reserved.
+--
+-- file Name: lib_tpe
+--
+-- Description:
+--   Language             ==   Karel for FANUC ROBOT
+--   Date                 ==   2023 - 03 - 11
+--   Modification Data    ==   2023 - 03 - 11
+--
+-- Author: speedbot
+--
+-- Version: 1.0
+--*********************************************************************************************************--
+--                                                                                                         --
+--                                                      .^^^                                               --
+--                                               .,~<c+{{{{{{t,                                            -- 
+--                                       `^,"!t{{{{{{{{{{{{{{{{+,                                          --
+--                                 .:"c+{{{{{{{{{{{{{{{{{{{{{{{{{+,                                        --
+--                                "{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{~                                       --
+--                               ^{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{!.  `^                                    --
+--                               c{{{{{{{{{{{{{c~,^`  `.^:<+{{{!.  `<{{+,                                  --
+--                              ^{{{{{{{{{{{!^              `,.  `<{{{{{{+:                                --
+--                              t{{{{{{{{{!`                    ~{{{{{{{{{{+,                              --
+--                             ,{{{{{{{{{:      ,uDWMMH^        `c{{{{{{{{{{{~                             --
+--                             +{{{{{{{{:     ,XMMMMMMw           t{{{{{{{{{{t                             --
+--                            ,{{{{{{{{t     :MMMMMMMMM"          ^{{{{{{{{{{~                             --
+--                            +{{{{{{{{~     8MMMMMMMMMMWD8##      {{{{{{{{{+                              --
+--                           :{{{{{{{{{~     8MMMMMMMMMMMMMMH      {{{{{{{{{~                              --
+--                           +{{{{{{{{{c     :MMMMMMMMMMMMMMc     ^{{{{{{{{+                               --
+--                          ^{{{{{{{{{{{,     ,%MMMMMMMMMMH"      c{{{{{{{{:                               --
+--                          `+{{{{{{{{{{{^      :uDWMMMX0"       !{{{{{{{{+                                --
+--                           `c{{{{{{{{{{{"                    ^t{{{{{{{{{,                                --
+--                             ^c{{{{{{{{{{{".               ,c{{{{{{{{{{t                                 --
+--                               ^c{{{{{{{{{{{+<,^`     .^~c{{{{{{{{{{{{{,                                 --
+--                                 ^c{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{t                                  --
+--                                   ^c{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{{t`                                  --
+--                                     ^c{{{{{{{{{{{{{{{{{{{{{{{{{{+c"^                                    --                         
+--                                       ^c{{{{{{{{{{{{{{{{{+!":^.                                         --
+--                                         ^!{{{{{{{{t!",^`                                                --
+--                                                                                                         --
+--*********************************************************************************************************--
+--  
+-- 2023 - 03 - 11 ++ copy_tpels_() ==> integer
+
+-- 2023 - 03 - 11 ++ extr_tpe_() ==> string
+
+-- 2023 - 03 - 11 ++ anal_tpels_() ==> array of string
+--
+%nolockgroup
+%nobusylamp
+%nopause = tpenable + command + error
+%comment = 'Tpe 230311'
+
+%include include/lib_tpe_t
+
+%include include/lib_tpe_h
+
+routine close_file__(FileVar : file) from lib_tpe
+
+routine open_file__(FileVar : file;
+                    FileName : string;
+                    OpenMode : integer) : integer from lib_tpe
+
+routine int_2str__(IntVal : integer) : string from lib_tpe 
+
+routine get_rint__(RegisterNo : integer) : integer from lib_tpe
+
+routine str_2int__(StrVal : string) : integer from lib_tpe 
+
+routine str_remove__(StrMsg : string ; StrLead : string) : string from lib_tpe
+
+begin
+
+
+end lib_tpe
+
+routine close_file__
+begin
+    clr_io_stat(Filevar)
+    close file FileVar
+    if io_status(FileVar) <> 0 then ; close file FileVar ; endif
+end close_file__
+
+routine open_file__
+begin
+    clr_io_stat(Filevar)
+    select OpenMode of
+    case(1):
+        open file FileVar('ro', FileName)
+    case(2):
+        open file FileVar('rw', FileName)
+    case(3):
+        open file FileVar('ap', FileName)
+    case(4):
+        set_file_atr(FileVar, ATR_UF)
+        open file FileVar('ro', FileName)
+    case(5):
+        set_file_atr(FileVar, ATR_UF)
+        open file FileVar('rw', FileName)
+    case(6):
+        set_file_atr(FileVar, ATR_UF)
+        open file FileVar('ap', FileName)
+    else:
+        open file FileVar('ap', FileName)
+    endselect
+    return(-abs(io_status(FileVar)))
+end open_file__
+
+routine int_2str__
+var
+    IntStr       : string[127]
+begin
+    cnv_int_str(IntVal, 0, 10, IntStr)
+    return(sub_str(IntStr, 2, str_len(IntStr)-1))
+end int_2str__
+
+routine get_rint__
+var
+    IntValue              : integer
+    RealValue             : real 
+    BoolValue             : boolean 
+    Status                : integer
+begin
+
+    get_reg(RegisterNo, BoolValue, IntValue, RealValue, Status)
+
+    if BoolValue = true then; IntValue = round(RealValue); endif; 
+
+    if Status <> 0 then; post_err(Status, '',0 ,2); else; return (IntValue); endif;
+
+end get_rint__
+
+routine str_2int__
+var
+    IntVal       : integer
+begin
+    cnv_str_int(StrVal, IntVal)
+    return(IntVal)
+end str_2int__
+
+routine str_remove__
+begin
+    
+    repeat
+        
+        if index(StrMsg, StrLead) = 1 then
+            
+            StrMsg = sub_str(StrMsg, str_len(StrLead) + 1, str_len(StrMsg)); 
+
+        else
+            return(StrMsg)
+        endif
+    until (sub_str(StrMsg, 1, str_len(StrLead)) <> StrLead)
+    
+    return(StrMsg);
+end str_remove__
+
+routine copy_tpels_
+var
+    TpeStar             : string[6]
+    TpeEnd              : string[6]
+    StrFine             : string[10]
+    StrVar              : string[254]
+    StrOld              : string[254]
+    BoolVar             : boolean 
+    Count               : integer 
+    LineNum             : integer 
+    IntOut              : integer
+    I                   : integer  
+    Status              : integer
+begin
+    
+    TpeStar = '/MN'
+    TpeEnd  = '/POS'
+    BoolVar = true
+    close_file__(FileVar1)
+    close_file__(FileVar2)
+
+    copy_file('md:\' + FromFile + '.ls', 'fra:\' + ToFile + '.ls', true, false, Status)
+    if Status <> 0 then post_err(Status, '', 0, 2); endif
+
+    Status = open_file__(FileVar1, 'fra:\' + ToFile + '.ls', 1)
+    if Status <> 0 then post_err(Status, '',0 ,2); endif
+    
+    Status = open_file__(FileVar2, 'fra:\oper_tpe.ls', 2)
+    if Status <> 0 then post_err(Status, '',0 ,2); endif
+
+    get_attr_prg(FromFile, at_num_line, LineNum, StrFine, Status)
+    if Status <> 0 then post_err(Status, '',0 ,2); endif
+
+    Count = 0
+    
+    while BoolVar do
+
+        read FileVar1(StrVar)
+        Status = io_status(FileVar1)
+        if Status <> 0 then clr_io_stat(FileVar1); endif
+
+        if index(StrVar , TpeStar) > 0 then
+           
+            I = 0
+            repeat 
+                write FileVar2(StrVar, cr)
+                Status = io_status(FileVar2)
+                if Status <> 0 then clr_io_stat(FileVar2); endif
+                
+                StrOld  = StrVar
+                StrVar  = ''
+                Count   = Count + 1
+
+                read FileVar1(StrVar)
+                Status = io_status(FileVar1)
+                if Status <> 0 then clr_io_stat(FileVar1); endif
+                
+                I = I + 1
+            until (index(StrOld , TpeEnd) > 0) or (Count > (LineNum + 2))
+            
+            BoolVar = false
+
+        else
+
+            StrVar = ''
+        endif
+
+    endwhile 
+
+    if (Count > (LineNum + 2)) then
+        
+        cancel file FileVar1
+        cancel file FileVar2
+        post_err(38000 , 'Error getting TPE program' ,0 ,2)
+    endif;
+
+    close_file__(FileVar1)
+    close_file__(FileVar2)
+    return(I - 2)
+end copy_tpels_
+
+routine extr_tpe_
+var
+    StrVar                : string[254]
+    StrStar               : string[10]
+    IntFine               : integer
+    Status                : integer 
+begin
+    
+    close_file__(FileVar)
+    
+    Status = open_file__(FileVar, 'fra:\oper_tpe.ls', 1)
+    if Status <> 0 then post_err(Status, '',0 , 2); endif;
+
+    IntFine = FineStar
+    StrStar = int_2str__(IntFine)  + ':';
+
+    repeat
+        read FileVar(StrVar)
+        Status = io_status(FileVar)
+        if Status <> 0 then clr_io_stat(FileVar); endif
+
+        if FlgBool then 
+
+            if index(StrVar, StrStar) = (6 - str_len(StrStar)) then 
+           
+                if (index(StrVar, FineStr) <> 0) and (index(StrVar, '!') = 0) and (index(StrVar, '--ch') = 0) then 
+               
+                    close_file__(FileVar)
+                    return (int_2str__(IntFine))
+                endif
+
+                IntFine = IntFine + 1
+                StrStar = int_2str__(IntFine)  + ':'
+            endif 
+
+        else 
+
+            if (index(StrVar, StrStar) = (6 - str_len(StrStar))) then 
+            
+                if (index(StrVar, 'J') = 6) or (index(StrVar, 'L') = 6) then 
+            
+                    close_file__(FileVar)
+                    return (StrVar)
+                endif
+
+                IntFine = IntFine + 1
+                StrStar = int_2str__(IntFine)  + ':'
+            endif 
+        endif  
+
+        if (index(StrVar , '/MN') <> 0) then StrVar = '-999'; endif
+
+    until (index(StrVar , '/POS') <> 0) or (str_2int__(str_remove__(sub_str(StrVar , 1 , 4) , ' ')) = FineEnd)
+    close_file__(FileVar)
+    return ('null')
+end extr_tpe_
+
+routine anal_tpels_
+var
+    StrMsg                : string[254]
+    StrVar                : string[15]
+    ArraStr               : array[5] of string[15]
+begin
+    
+    StrMsg      = TpeMsg
+    StrVar      = sub_str(StrMsg, 1, index(StrMsg, ':'))
+    StrMsg      = sub_str(StrMsg, index(StrMsg, ':') + 1, str_len(StrMsg))
+    
+    StrVar      = str_remove__(StrVar, ' ')
+    ArraStr[1]  = sub_str(StrVar, 1, index(StrVar, ':') - 1)
+    ArraStr[2]  = sub_str(StrMsg, 1, 1)
+    if (ArraStr[2] <> 'L') and (ArraStr[2] <> 'J') then
+
+        post_err(3800, 'Unable to resolve matching joint', 0, 2)
+    endif
+    
+    StrMsg = sub_str(StrMsg, index(StrMsg, ' ') + 1, str_len(StrMsg))
+    StrVar = sub_str(StrMsg, 1, index(StrMsg, ' ') - 1)
+
+    if sub_str(StrVar, 1, 2) = 'PR' then
+        
+        ArraStr[3] = '-' + sub_str(StrVar, index(StrVar, '[') + 1, 1)
+    else 
+        ArraStr[3] = sub_str(StrVar, index(StrVar, '[') + 1, 1)
+    endif
+
+    StrMsg = sub_str(StrMsg, index(StrMsg, ' ') + 1, str_len(StrMsg))
+    StrVar = sub_str(StrMsg, 1, index(StrMsg, ' ') - 1)
+
+    if ArraStr[2] = 'J' then
+
+        if index(StrVar, '%') = 0 then
+            post_err(3800, ArraStr[1] + 'Not (%) implemented according to the unit',0 ,2)
+        endif
+
+        if index(StrVar, 'R') <> 0 then
+            ArraStr[4] = int_2str__(get_rint__(str_2int__(sub_str(StrVar, index(StrVar, '[') + 1, 1))))
+        else
+            ArraStr[4] = sub_str(StrVar, 1, index(StrVar, '%') - 1)
+        endif
+
+        StrMsg = sub_str(StrMsg, index(StrMsg, ' ') + 1, str_len(StrMsg))
+        StrVar = sub_str(StrMsg, 1, index(StrMsg, ' ') - 1)
+
+    else
+        if index(StrVar, 'mm/sec') = 0 then
+            post_err(0, ArraStr[1] + 'Not (mm/sec) implemented according to the unit',0 ,2)
+        endif
+
+        if index(StrVar, 'R') <> 0 then
+
+            ArraStr[4] = int_2str__(get_rint__(str_2int__(sub_str(StrVar, index(StrVar, '[') + 1, 1))))
+        else
+            ArraStr[4] = sub_str(StrVar, 1, index(StrVar, 'mm/sec') - 1)
+        endif
+
+        StrMsg = sub_str(StrMsg, index(StrMsg, ' ') + 1, str_len(StrMsg))
+        StrVar = sub_str(StrMsg, 1, index(StrMsg, ' ') - 1) 
+
+    endif;
+
+    if index(StrVar, 'FINE') <> 0 then
+
+        ArraStr[5] = StrVar
+        return( ArraStr)
+    else
+
+        if str_len(StrVar) >= 4 then
+
+            ArraStr[5] = sub_str(StrVar, 4, str_len(StrVar))
+            return(ArraStr)
+        else
+
+            StrMsg      = sub_str(StrMsg, index(StrMsg, ' ') + 1, str_len(StrMsg))
+            StrVar      = sub_str(StrMsg, 1, index(StrMsg, ' ') - 1)
+            ArraStr[5]  = int_2str__(get_rint__(str_2int__(sub_str(StrVar, index(StrVar, '[') + 1, 1))))
+            return( ArraStr)
+        endif
+    endif
+
+end anal_tpels_
+
+
+    
